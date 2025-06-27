@@ -1,5 +1,5 @@
-name: "Claude Code Action Official"
-description: "General-purpose Claude agent for GitHub PRs and issues. Can answer questions and implement code changes."
+name: "CCABUNLATEST"
+description: "General-purpose Claude agent for GitHub PRs and issues. Can answer questions and implement code changes. Latest version of the action."
 branding:
   icon: "at-sign"
   color: "orange"

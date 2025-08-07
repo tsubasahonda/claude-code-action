@@ -9,9 +9,10 @@ import {
 import {
   parseGitHubContext,
   isPullRequestReviewCommentEvent,
+  isEntityContext,
 } from "../github/context";
 import { GITHUB_SERVER_URL } from "../github/api/config";
-import { checkAndDeleteEmptyBranch } from "../github/operations/branch-cleanup";
+import { checkAndCommitOrDeleteBranch } from "../github/operations/branch-cleanup";
 import { updateClaudeComment } from "../github/operations/comments/update-claude-comment";
 
 async function run() {
@@ -23,7 +24,14 @@ async function run() {
     const triggerUsername = process.env.TRIGGER_USERNAME;
 
     const context = parseGitHubContext();
+
+    // This script is only called for entity-based events
+    if (!isEntityContext(context)) {
+      throw new Error("update-comment-link requires an entity context");
+    }
+
     const { owner, repo } = context.repository;
+
     const octokit = createOctokit(githubToken);
 
     const serverUrl = GITHUB_SERVER_URL;
@@ -88,13 +96,16 @@ async function run() {
     const currentBody = comment.body ?? "";
 
     // Check if we need to add branch link for new branches
-    const { shouldDeleteBranch, branchLink } = await checkAndDeleteEmptyBranch(
-      octokit,
-      owner,
-      repo,
-      claudeBranch,
-      baseBranch,
-    );
+    const useCommitSigning = process.env.USE_COMMIT_SIGNING === "true";
+    const { shouldDeleteBranch, branchLink } =
+      await checkAndCommitOrDeleteBranch(
+        octokit,
+        owner,
+        repo,
+        claudeBranch,
+        baseBranch,
+        useCommitSigning,
+      );
 
     // Check if we need to add PR URL when we have a new branch
     let prLink = "";
@@ -198,7 +209,7 @@ async function run() {
       jobUrl,
       branchLink,
       prLink,
-      branchName: shouldDeleteBranch ? undefined : claudeBranch,
+      branchName: shouldDeleteBranch || !branchLink ? undefined : claudeBranch,
       triggerUsername,
       errorDetails,
     };

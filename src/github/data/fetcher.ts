@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import type { Octokits } from "../api/client";
 import { ISSUE_QUERY, PR_QUERY, USER_QUERY } from "../api/queries/github";
 import type {
@@ -114,7 +114,7 @@ export async function fetchGitHubData({
 
       try {
         // Use git hash-object to compute the SHA for the current file content
-        const sha = execSync(`git hash-object "${file.path}"`, {
+        const sha = execFileSync("git", ["hash-object", file.path], {
           encoding: "utf-8",
         }).trim();
         return {
@@ -134,7 +134,7 @@ export async function fetchGitHubData({
 
   // Prepare all comments for image processing
   const issueComments: CommentWithImages[] = comments
-    .filter((c) => c.body)
+    .filter((c) => c.body && !c.isMinimized)
     .map((c) => ({
       type: "issue_comment" as const,
       id: c.databaseId,
@@ -154,7 +154,7 @@ export async function fetchGitHubData({
   const reviewComments: CommentWithImages[] =
     reviewData?.nodes
       ?.flatMap((r) => r.comments?.nodes ?? [])
-      .filter((c) => c.body)
+      .filter((c) => c.body && !c.isMinimized)
       .map((c) => ({
         type: "review_comment" as const,
         id: c.databaseId,
